@@ -2,55 +2,68 @@ const SPARQL_ENDPOINT = 'https://data.adamlink.nl/_api/datasets/menno/alles/serv
 // const SPARQL_ENDPOINT = 'https://data.adamlink.nl/AdamNet/all/services/endpoint'
 const SPARQL_HREF = 'https://data.adamlink.nl/AdamNet/all/services/endpoint'
 
+const PREFIXES = `PREFIX dc: <http://purl.org/dc/elements/1.1/>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX geo: <http://www.opengis.net/ont/geosparql#>
+PREFIX sem: <http://semanticweb.cs.vu.nl/2009/11/sem/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+`
+
 PERIOD_BOUNDS = {
-  start: 1600,
+  start: 1550,
   end: (new Date()).getFullYear()
 }
 
 function createMapsQuery (data) {
   const round = (num) => Math.round(num * 100000) / 100000
 
-  return `
-PREFIX dc: <http://purl.org/dc/elements/1.1/>
-PREFIX dct: <http://purl.org/dc/terms/>
-PREFIX geo: <http://www.opengis.net/ont/geosparql#>
-PREFIX sem: <http://semanticweb.cs.vu.nl/2009/11/sem/>
-PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+  let collectionsFilter = ''
+  if (data.collections.length > 0) {
+    const strings = `${data.collections.map(collection => `    "${collection}"^^xsd:string`).join(',\n')}`
+    collectionsFilter = `FILTER (?provenance IN (\n${strings})\n  ) .\n`
+  }
 
-SELECT ?map ?img ?x ?y ?title ?begin {
+  return `${PREFIXES}
+
+SELECT ?map ?img ?title ?provenance ?begin {
   ?map dct:spatial ?spatial .
   ?map foaf:depiction ?img .
   ?map dc:title ?title .
-
+  ?map dct:provenance ?provenance .
   ?map sem:hasBeginTimeStamp ?begin .
-  FILTER (year(xsd:dateTime(?begin)) >= ${data.period.start}) .
-  FILTER (year(xsd:dateTime(?begin)) <= ${data.period.end}) .
 
   ?spatial dc:type "outline"^^xsd:string .
   ?spatial geo:hasGeometry/geo:asWKT ?wkt .
   ?spatial wdt:P2046 ?km2 .
+
   bind (bif:st_geomfromtext("POINT(${round(data.coordinates.lng)} ${round(data.coordinates.lat)})") as ?point)
   bind (bif:st_geomfromtext(?wkt) as ?outline)
+
   FILTER (bif:st_intersects(?point, ?outline))
+  FILTER (year(xsd:dateTime(?begin)) >= ${data.period.start}) .
+  FILTER (year(xsd:dateTime(?begin)) <= ${data.period.end}) .
+  ${collectionsFilter}
 }
 ORDER BY ASC(?km2)
 LIMIT 25`.trim()
 }
 
 function createCollectionsQuery () {
-  return `
-PREFIX dc: <http://purl.org/dc/elements/1.1/>
-PREFIX dct: <http://purl.org/dc/terms/>
-PREFIX void: <http://rdfs.org/ns/void#>
-SELECT DISTINCT ?provenance ?collection (COUNT(?map) AS ?count) WHERE {
-  ?map dc:type "kaart"^^xsd:string .
-  ?map void:inDataset ?collection .
-  ?map dct:provenance ?provenance .
+  return `${PREFIXES}
+
+SELECT DISTINCT ?provenance (COUNT(?map) AS ?count) WHERE {
   ?map dct:spatial ?spatial .
+  ?map foaf:depiction ?img .
+  ?map dc:title ?title .
+  ?map sem:hasBeginTimeStamp ?begin .
+  ?map dct:provenance ?provenance .
+
   ?spatial dc:type "outline"^^xsd:string .
+  ?spatial geo:hasGeometry/geo:asWKT ?wkt .
+  ?spatial wdt:P2046 ?km2 .
 }
-GROUP BY ?provenance ?collection
+GROUP BY ?provenance
 ORDER BY DESC(?count)
 LIMIT 100
 `.trim()
@@ -76,26 +89,62 @@ function executeQuery (query) {
     .catch((err) => console.error('Parsing results failed', err))
 }
 
-function createRangeSlider (vnode, min, max, value, oninput) {
-  return m('input', {
-    type: 'range',
-    min,
-    max,
-    value,
-    oninput: (event) => {
-      const value = parseInt(event.target.value)
-      oninput(value)
-    }
-  })
+const RangeSlider = {
+  value: undefined,
+  oncreate: (vnode) => Object.assign(vnode.state, {
+    value: vnode.attrs.value
+  }),
+  view: (vnode) => m('div', {}, [
+    m('label', {
+      for: `range-slider-${vnode.attrs.id}`
+    }, vnode.attrs.label),
+    m('input', {
+      id: `range-slider-${vnode.attrs.id}`,
+      type: 'range',
+      min: vnode.attrs.start,
+      max: vnode.attrs.end,
+      value: vnode.attrs.value,
+      oninput: (event) => {
+        const value = parseInt(event.target.value)
+        vnode.attrs.valueChanged(value)
+      }
+    }),
+    m('span', vnode.attrs.value)
+  ])
 }
 
 const CollectionsSelect = {
   collections: undefined,
-  view: (vnode) => m('select', {
-    multiple: 'multiple'
-  }, vnode.state.collections && vnode.state.collections.map((collection) =>
-    m('option', `${collection.provenance.value} (${collection.count.value} kaarten)`)
-  )),
+  view: (vnode) => [
+    m('label', {
+      for: 'form-collections'
+    }, 'Collecties:'),
+    m('fieldset', {
+      id: 'form-collections',
+      oninput: (event) => {
+        const checkedBoxes = document.querySelectorAll('input[name=form-collections-checkbox]:checked')
+        const values = Array.prototype.map.call(checkedBoxes, (checkbox) => checkbox.value)
+        vnode.attrs.collectionsUpdated(values)
+      }
+    }, vnode.state.collections && vnode.state.collections.map((collection, index) =>
+      m('div', [
+        m('input', {
+          type: 'checkbox',
+          name: 'form-collections-checkbox',
+          id: `form-collections-checkbox-${index}`,
+          value: collection.provenance.value
+        }),
+        m('label', {
+          for: `form-collections-checkbox-${index}`,
+        }, [
+          m('span', collection.provenance.value),
+          m('span', {
+            class: 'form-collections-map-count'
+          }, `${collection.count.value} ${parseInt(collection.count.value) === 1 ? 'kaart' : 'kaarten'}`)
+        ])
+      ])
+    ))
+  ],
   oncreate: (vnode) => {
     const query = createCollectionsQuery()
     executeQuery(query)
@@ -106,13 +155,31 @@ const CollectionsSelect = {
   }
 }
 
+const ExecuteButton = {
+  view: (vnode) => m('button', {
+    type: 'submit',
+    onclick: (event) => {
+      if (vnode.attrs.onclick) {
+        vnode.attrs.onclick(event)
+      }
+    }
+  }, '▶ Voer query uit')
+}
+
 const GeoIntersects = {
   view: (vnode) => m('div', {
     id: 'map-container'
   }, [
     m(Map, {
       moveEnd: vnode.attrs.coordinatesUpdated
-    })
+    }),
+    m('div', {
+      class: 'map-crosshair'
+    }, [
+      m('img', {
+        src: 'images/crosshair.svg'
+      })
+    ])
   ])
 }
 
@@ -125,34 +192,61 @@ const Form = {
         vnode.attrs.executeMapsQuery()
       }
     }, [
-      m(CollectionsSelect),
-      createRangeSlider(vnode, PERIOD_BOUNDS.start, PERIOD_BOUNDS.end, vnode.attrs.data.period.start, (value) => {
-        vnode.attrs.data.period.start = value
-        if (vnode.attrs.data.period.end < value) {
-          vnode.attrs.data.period.end = value
-        }
-        vnode.attrs.formUpdated(vnode.attrs.data)
-      }),
-      createRangeSlider(vnode, PERIOD_BOUNDS.start, PERIOD_BOUNDS.end, vnode.attrs.data.period.end, (value) => {
-        vnode.attrs.data.period.end = value
-        if (vnode.attrs.data.period.start > value) {
-          vnode.attrs.data.period.start = value
-        }
-        vnode.attrs.formUpdated(vnode.attrs.data)
-      }),
-      m(GeoIntersects, {
-        coordinatesUpdated: (coordinates) => {
-          vnode.attrs.data.coordinates = {
-            lat: coordinates.lat,
-            lng: coordinates.lng
-          }
+      m(CollectionsSelect, {
+        collectionsUpdated: (collections) => {
+          vnode.attrs.data.collections = collections
           vnode.attrs.formUpdated(vnode.attrs.data)
-          m.redraw()
         }
       }),
-      m('button', {
-        type: 'submit'
-      }, 'Voer query uit op SPARQL-endpoint')
+      m('div', [
+        m('label', 'Filter kaarten met leeftijd:'),
+        m(RangeSlider, {
+          id: 'start',
+          label: 'Van',
+          start: PERIOD_BOUNDS.start,
+          end: PERIOD_BOUNDS.end,
+          value: vnode.attrs.data.period.start,
+          valueChanged: (value) => {
+           vnode.attrs.data.period.start = value
+           if (vnode.attrs.data.period.end < value) {
+             vnode.attrs.data.period.end = value
+           }
+           vnode.attrs.formUpdated(vnode.attrs.data)
+          }
+        }),
+        m(RangeSlider, {
+          id: 'end',
+          label: 'Tot',
+          start: PERIOD_BOUNDS.start,
+          end: PERIOD_BOUNDS.end,
+          value: vnode.attrs.data.period.end,
+          valueChanged: (value) => {
+            vnode.attrs.data.period.end = value
+            if (vnode.attrs.data.period.start > value) {
+              vnode.attrs.data.period.start = value
+            }
+            vnode.attrs.formUpdated(vnode.attrs.data)
+          }
+        })
+      ]),
+      m('div', [
+        m('label', 'Filter kaarten die dit punt doorkruisen:'),
+        m(GeoIntersects, {
+          coordinatesUpdated: (coordinates) => {
+            vnode.attrs.data.coordinates = {
+              lat: coordinates.lat,
+              lng: coordinates.lng
+            }
+            vnode.attrs.formUpdated(vnode.attrs.data)
+            m.redraw()
+          }
+        }),
+      ]),
+      m('div', {
+        class: 'section-footer',
+      }, [
+        m(ExecuteButton)
+      ])
     ])
   ])
 }
@@ -187,13 +281,21 @@ const Sparql = {
     m('textarea', {
       id: 'sparql-query'
     }, createMapsQuery(vnode.attrs.data)),
-    m('div', [
+    m('div', {
+      class: 'section-footer'
+    }, [
       m('a', {
+        target: '_blank',
         href: `${SPARQL_HREF}#query=${encodeURIComponent(createMapsQuery(vnode.attrs.data))}&` +
         `contentTypeConstruct=text%2Fturtle&contentTypeSelect=application%2Fsparql-results%2Bjson&` +
         `endpoint=${encodeURIComponent(SPARQL_ENDPOINT)}&requestMethod=POST&tabTitle=Query&` +
         `headers=%7B%7D&outputFormat=table`
-      }, 'Open query in AdamLink')
+      }, 'Open query in AdamLink'),
+      m(ExecuteButton, {
+        onclick: () => {
+          vnode.attrs.executeMapsQuery()
+        }
+      })
     ])
   ]),
   oncreate: (vnode) => {
@@ -226,6 +328,14 @@ function renderResults (data) {
         class: 'truncate',
         title: result.title.value
       }, result.title.value),
+      m('div', {
+        class: 'result-values'
+      }, [
+        m('span', {
+          class: 'truncate',
+        }, result.provenance.value),
+        m('span', result.begin.value.slice(0, 4))
+      ]),
       m('a', {
         href: result.map.value
       }, [
@@ -263,13 +373,19 @@ const App = {
       coordinates: {
         lat: 52.37064,
         lng: 4.90047
-      }
+      },
+      collections: []
     }
   },
   view: (vnode) => ([
-    m('header', 'Kaarten uit Adamlink met SPARQL'),
+    m('header', [
+      m('img', {
+        src: 'images/header.jpg'
+      }),
+      m('h1', 'Kaart-SPARQL')
+    ]),
     m('main', [
-      m('p', 'Hier komt de introductie! En het wordt ook nog mooier dan dit natuurlijk.'),
+      m('p', 'Hier komt de introductie!'),
       m('ol', {
         class: 'sections'
       }, [
@@ -279,7 +395,8 @@ const App = {
           executeMapsQuery: () => executeMapsQuery(vnode)
         }),
         m(Sparql, {
-          data: vnode.state.data.form
+          data: vnode.state.data.form,
+          executeMapsQuery: () => executeMapsQuery(vnode)
         }),
         m(Results, {
           data: vnode.state.data.results

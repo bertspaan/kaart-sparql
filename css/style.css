@@ -13,21 +13,43 @@ body {
   box-sizing: border-box;
 }
 
-header {
-  background-color: #878432;
+html, input, button, select {
+  font-size: 16.5px;
+  font-family: monospace;
 }
 
-html, input, select {
-  font-size: 17px;
-  font-family: monospace;
+a, a:visited {
+  color: #3234fe
+}
+
+h1, h2, header > img {
+  display: inline-block;
+  border-bottom-color: #3234fe;
+  border-bottom-width: 4px;
+  border-bottom-style: solid;
 }
 
 select {
   width: 100%;
 }
 
+button {
+  background: #3234fe;
+  border-radius: 4px;
+  font-weight: bold;
+  color: white;
+  padding: 0.3em 0.5em;
+  display: inline-block;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+button:hover {
+  background: #f74134;
+}
+
 .truncate {
-  /*width: 250px;*/
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -41,18 +63,71 @@ select {
 
 .sections > * {
   width: 100%;
-  /*min-height: 75vh;*/
   padding: 1em;
+}
+
+.section-footer {
+  margin-top: 1em;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.section-footer > * {
+  margin-left: 1em;
+}
+
+#form-collections {
+  height: 10em;
+  overflow: scroll;
+}
+
+#form-collections label {
+  margin-left: 0.5em;
+}
+
+.form-collections-map-count {
+  padding-left: 0.5em;
+  color: #3234fe;
 }
 
 #map-container {
   width: 100%;
   height: 400px;
+  position: relative;
 }
 
-#map {
+#map-container > * {
+  position: absolute;
+  top: 0;
   width: 100%;
   height: 100%;
+}
+
+.map-crosshair {
+  z-index: 999;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-crosshair img {
+  width: 150px;
+}
+
+fieldset {
+  border: none;
+}
+
+fieldset, .CodeMirror {
+  background-color: #f6f8fa;
+}
+
+#results .result-values {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 #results li img {
