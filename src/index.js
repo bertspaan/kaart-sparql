@@ -19,7 +19,9 @@ function createMapsQuery (data) {
   const round = (num) => Math.round(num * 100000) / 100000
 
   let collectionsFilter = ''
-  if (data.collections.length > 0) {
+  if (data.collections.length === 1) {
+    collectionsFilter = `?map dct:provenance "${data.collections[0]}"^^xsd:string .\n`
+  } else if (data.collections.length > 1) {
     const strings = `${data.collections.map(collection => `    "${collection}"^^xsd:string`).join(',\n')}`
     collectionsFilter = `\n  FILTER (?provenance IN (\n${strings})\n  ) .`
   }
@@ -36,13 +38,12 @@ SELECT ?map ?img ?title ?provenance ?begin {
   ?spatial dc:type "outline"^^xsd:string .
   ?spatial geo:hasGeometry/geo:asWKT ?wkt .
   ?spatial wdt:P2046 ?km2 .
-
-  bind (bif:st_geomfromtext("POINT(${round(data.coordinates.lng)} ${round(data.coordinates.lat)})") as ?point)
-  bind (bif:st_geomfromtext(?wkt) as ?outline)
   ${collectionsFilter}
-  FILTER (bif:st_intersects(?point, ?outline))
   FILTER (year(xsd:dateTime(?begin)) >= ${data.period.start}) .
   FILTER (year(xsd:dateTime(?begin)) <= ${data.period.end}) .
+  bind (bif:st_geomfromtext("POINT(${round(data.coordinates.lng)} ${round(data.coordinates.lat)})") as ?point)
+  bind (bif:st_geomfromtext(?wkt) as ?outline)
+  FILTER (bif:st_intersects(?point, ?outline))  
 }
 ORDER BY ASC(?km2)
 LIMIT 25`.trim()
