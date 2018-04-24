@@ -94,10 +94,12 @@ const RangeSlider = {
   oncreate: (vnode) => Object.assign(vnode.state, {
     value: vnode.attrs.value
   }),
-  view: (vnode) => m('div', {}, [
+  view: (vnode) => m('div', {
+    class: 'range-slider'
+  }, [
     m('label', {
       for: `range-slider-${vnode.attrs.id}`
-    }, vnode.attrs.label),
+    }, `${vnode.attrs.label} ${vnode.attrs.value}`),
     m('input', {
       id: `range-slider-${vnode.attrs.id}`,
       type: 'range',
@@ -108,17 +110,13 @@ const RangeSlider = {
         const value = parseInt(event.target.value)
         vnode.attrs.valueChanged(value)
       }
-    }),
-    m('span', vnode.attrs.value)
+    })
   ])
 }
 
 const CollectionsSelect = {
   collections: undefined,
   view: (vnode) => [
-    m('label', {
-      for: 'form-collections'
-    }, 'Collecties:'),
     m('fieldset', {
       id: 'form-collections',
       onchange: (event) => {
@@ -193,55 +191,78 @@ const Form = {
         vnode.attrs.executeMapsQuery()
       }
     }, [
-      m(CollectionsSelect, {
-        collectionsUpdated: (collections) => {
-          vnode.attrs.data.collections = collections
-          vnode.attrs.formUpdated(vnode.attrs.data)
-        }
-      }),
       m('div', [
-        m('label', 'Filter kaarten met leeftijd:'),
-        m(RangeSlider, {
-          id: 'start',
-          label: 'Van',
-          start: PERIOD_BOUNDS.start,
-          end: PERIOD_BOUNDS.end,
-          value: vnode.attrs.data.period.start,
-          valueChanged: (value) => {
-           vnode.attrs.data.period.start = value
-           if (vnode.attrs.data.period.end < value) {
-             vnode.attrs.data.period.end = value
-           }
-           vnode.attrs.formUpdated(vnode.attrs.data)
-          }
-        }),
-        m(RangeSlider, {
-          id: 'end',
-          label: 'Tot',
-          start: PERIOD_BOUNDS.start,
-          end: PERIOD_BOUNDS.end,
-          value: vnode.attrs.data.period.end,
-          valueChanged: (value) => {
-            vnode.attrs.data.period.end = value
-            if (vnode.attrs.data.period.start > value) {
-              vnode.attrs.data.period.start = value
+        m('label', {
+          for: 'form-collections',
+          class: 'filter-label'
+        }, 'Laat kaarten uit deze collecties zien:'),
+        m('div', {
+          class: 'filter'
+        }, [
+          m(CollectionsSelect, {
+            collectionsUpdated: (collections) => {
+              vnode.attrs.data.collections = collections
+              vnode.attrs.formUpdated(vnode.attrs.data)
             }
-            vnode.attrs.formUpdated(vnode.attrs.data)
-          }
-        })
+          })
+        ])
       ]),
       m('div', [
-        m('label', 'Filter kaarten die dit punt doorkruisen:'),
-        m(GeoIntersects, {
-          coordinatesUpdated: (coordinates) => {
-            vnode.attrs.data.coordinates = {
-              lat: coordinates.lat,
-              lng: coordinates.lng
+        m('label', {
+          class: 'filter-label'
+        }, 'Laat kaarten zien uit deze periode:'),
+        m('div', {
+          id: 'period-filter',
+          class: 'filter'
+        }, [
+          m(RangeSlider, {
+            id: 'start',
+            label: 'Van',
+            start: PERIOD_BOUNDS.start,
+            end: PERIOD_BOUNDS.end,
+            value: vnode.attrs.data.period.start,
+            valueChanged: (value) => {
+             vnode.attrs.data.period.start = value
+             if (vnode.attrs.data.period.end < value) {
+               vnode.attrs.data.period.end = value
+             }
+             vnode.attrs.formUpdated(vnode.attrs.data)
             }
-            vnode.attrs.formUpdated(vnode.attrs.data)
-            m.redraw()
-          }
-        }),
+          }),
+          m(RangeSlider, {
+            id: 'end',
+            label: '; tot',
+            start: PERIOD_BOUNDS.start,
+            end: PERIOD_BOUNDS.end,
+            value: vnode.attrs.data.period.end,
+            valueChanged: (value) => {
+              vnode.attrs.data.period.end = value
+              if (vnode.attrs.data.period.start > value) {
+                vnode.attrs.data.period.start = value
+              }
+              vnode.attrs.formUpdated(vnode.attrs.data)
+            }
+          })
+        ])
+      ]),
+      m('div', [
+        m('label', {
+          class: 'filter-label'
+        }, 'Laat kaarten zien die het midden van onderstaande kaart doorkruisen:'),
+        m('div', {
+          class: 'filter'
+        }, [
+          m(GeoIntersects, {
+            coordinatesUpdated: (coordinates) => {
+              vnode.attrs.data.coordinates = {
+                lat: coordinates.lat,
+                lng: coordinates.lng
+              }
+              vnode.attrs.formUpdated(vnode.attrs.data)
+              m.redraw()
+            }
+          })
+        ])
       ]),
       m('div', {
         class: 'section-footer',

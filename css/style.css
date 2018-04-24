@@ -122,6 +122,32 @@ button:hover {
   width: 150px;
 }
 
+.filter-label {
+  display: inline-block;
+  margin-bottom: 1em;
+}
+
+.filter {
+  margin-bottom: 1em;
+  margin-left: 1em;
+}
+
+#period-filter {
+  display: flex;
+  align-items: center;
+}
+
+.range-slider {
+  width: 50%;
+  display: flex;
+  align-items: center;
+}
+
+.range-slider input {
+  margin-left: 0.5em;
+  flex-grow: 1;
+}
+
 fieldset {
   border: none;
 }
