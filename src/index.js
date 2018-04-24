@@ -8,7 +8,7 @@ PREFIX geo: <http://www.opengis.net/ont/geosparql#>
 PREFIX sem: <http://semanticweb.cs.vu.nl/2009/11/sem/>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-`
+`.trim()
 
 PERIOD_BOUNDS = {
   start: 1550,
@@ -21,7 +21,7 @@ function createMapsQuery (data) {
   let collectionsFilter = ''
   if (data.collections.length > 0) {
     const strings = `${data.collections.map(collection => `    "${collection}"^^xsd:string`).join(',\n')}`
-    collectionsFilter = `FILTER (?provenance IN (\n${strings})\n  ) .\n`
+    collectionsFilter = `\n  FILTER (?provenance IN (\n${strings})\n  ) .`
   }
 
   return `${PREFIXES}
@@ -39,11 +39,10 @@ SELECT ?map ?img ?title ?provenance ?begin {
 
   bind (bif:st_geomfromtext("POINT(${round(data.coordinates.lng)} ${round(data.coordinates.lat)})") as ?point)
   bind (bif:st_geomfromtext(?wkt) as ?outline)
-
+  ${collectionsFilter}
   FILTER (bif:st_intersects(?point, ?outline))
   FILTER (year(xsd:dateTime(?begin)) >= ${data.period.start}) .
   FILTER (year(xsd:dateTime(?begin)) <= ${data.period.end}) .
-  ${collectionsFilter}
 }
 ORDER BY ASC(?km2)
 LIMIT 25`.trim()
@@ -121,9 +120,10 @@ const CollectionsSelect = {
     }, 'Collecties:'),
     m('fieldset', {
       id: 'form-collections',
-      oninput: (event) => {
-        const checkedBoxes = document.querySelectorAll('input[name=form-collections-checkbox]:checked')
-        const values = Array.prototype.map.call(checkedBoxes, (checkbox) => checkbox.value)
+      onchange: (event) => {
+        const checkBoxes = document.querySelectorAll('input[name=form-collections-checkbox]:checked')
+        const values = Array.prototype.map.call(checkBoxes, (checkbox) => checkbox.value)
+
         vnode.attrs.collectionsUpdated(values)
       }
     }, vnode.state.collections && vnode.state.collections.map((collection, index) =>
