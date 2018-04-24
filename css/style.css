@@ -34,7 +34,7 @@ select {
 }
 
 button {
-  background: #3234fe;
+  background-color: #3234fe;
   border-radius: 4px;
   font-weight: bold;
   color: white;
@@ -43,10 +43,16 @@ button {
   cursor: pointer;
   border: none;
   text-decoration: none;
+  border-style: solid;
+  border-width: 4px;
+  border-color: #fefefe;
 }
 
+
 button:hover {
-  background: #f74134;
+  background-color: #fefefe;
+  border-color: #3234fe;
+  color: #3234fe;
 }
 
 .truncate {
