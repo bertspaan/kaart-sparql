@@ -43,7 +43,7 @@ SELECT ?map ?img ?title ?provenance ?begin {
   FILTER (year(xsd:dateTime(?begin)) <= ${data.period.end}) .
   bind (bif:st_geomfromtext("POINT(${round(data.coordinates.lng)} ${round(data.coordinates.lat)})") as ?point)
   bind (bif:st_geomfromtext(?wkt) as ?outline)
-  FILTER (bif:st_intersects(?point, ?outline))  
+  FILTER (bif:st_intersects(?point, ?outline))
 }
 ORDER BY ASC(?km2)
 LIMIT 25`.trim()
@@ -320,7 +320,7 @@ const Sparql = {
   }
 }
 
-function renderResults (data) {
+function renderResults (data, executeMapsQuery) {
   if (data && data.length) {
     return m('ol', {
       id: 'results'
@@ -346,14 +346,22 @@ function renderResults (data) {
       ])
     ])))
   } else {
-    return m('p', 'Geen resultaten')
+    return m('p', [
+      m('span', 'Geen resultaten; '),
+      m(ExecuteButton, {
+        onclick: () => {
+          executeMapsQuery()
+        }
+      }),
+      m('span', ' of pas parameters aan.')
+    ])
   }
 }
 
 const Results =  {
   view: (vnode) => m('li', [
     m('h2', 'Resultaten'),
-    renderResults(vnode.attrs.data)
+    renderResults(vnode.attrs.data, vnode.attrs.executeMapsQuery)
   ])
 }
 
@@ -400,7 +408,8 @@ const App = {
           executeMapsQuery: () => executeMapsQuery(vnode)
         }),
         m(Results, {
-          data: vnode.state.data.results
+          data: vnode.state.data.results,
+          executeMapsQuery: () => executeMapsQuery(vnode)
         })
       ])
     ])

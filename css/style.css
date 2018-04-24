@@ -139,3 +139,15 @@ fieldset, .CodeMirror {
 #results li img {
   width: 100%;
 }
+
+.result-values {
+  margin-bottom: 1em;
+}
+
+.result-values > span:first-child {
+  margin-right: 0.5em;
+}
+
+.result-values > span:last-child {
+  font-weight: bold;
+}
