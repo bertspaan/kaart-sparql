@@ -29,7 +29,7 @@ h1, h2, header > img {
   border-bottom-style: solid;
 }
 
-select {
+input[type="text"], select {
   width: 100%;
 }
 
@@ -143,6 +143,10 @@ button:hover {
   align-items: center;
 }
 
+.range-slider label {
+  flex-shrink: 0;
+}
+
 .range-slider input {
   margin-left: 0.5em;
   flex-grow: 1;
@@ -156,10 +160,18 @@ fieldset, .CodeMirror {
   background-color: #f6f8fa;
 }
 
+#results li {
+  margin-bottom: 1em;
+}
+
 #results .result-values {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+#results .result-values h3 {
+  margin: 0;
 }
 
 #results li img {
@@ -172,8 +184,5 @@ fieldset, .CodeMirror {
 
 .result-values > span:first-child {
   margin-right: 0.5em;
-}
-
-.result-values > span:last-child {
   font-weight: bold;
 }

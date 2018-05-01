@@ -26,19 +26,28 @@ function createMapsQuery (data) {
     collectionsFilter = `\n  FILTER (?provenance IN (\n${strings})\n  ) .`
   }
 
+  let creatorFilter = ''
+  if (data.creator.length > 1) {
+    // Escape double quotes
+    const regex = data.creator.replace(/\\([\s\S])|(")/g, '\\$1$2')
+    creatorFilter = `FILTER REGEX(?creator, "${regex}", "i") .`
+  }
+
   return `${PREFIXES}
 
-SELECT ?map ?img ?title ?provenance ?begin {
+SELECT ?map ?img ?title ?provenance ?creator ?begin {
   ?map dct:spatial ?spatial .
   ?map foaf:depiction ?img .
   ?map dc:title ?title .
   ?map dct:provenance ?provenance .
+  ?map dc:creator ?creator .
   ?map sem:hasBeginTimeStamp ?begin .
 
   ?spatial dc:type "outline"^^xsd:string .
   ?spatial geo:hasGeometry/geo:asWKT ?wkt .
   ?spatial wdt:P2046 ?km2 .
   ${collectionsFilter}
+  ${creatorFilter}
   FILTER (year(xsd:dateTime(?begin)) >= ${data.period.start}) .
   FILTER (year(xsd:dateTime(?begin)) <= ${data.period.end}) .
   bind (bif:st_geomfromtext("POINT(${round(data.coordinates.lng)} ${round(data.coordinates.lat)})") as ?point)
@@ -210,6 +219,25 @@ const Form = {
       m('div', [
         m('label', {
           class: 'filter-label'
+        }, 'Laat kaarten van deze maker zien:'),
+        m('div', {
+          class: 'filter'
+        }, [
+          m('input', {
+            value: vnode.attrs.data.creator,
+            type: 'text',
+            oninput: (event) => {
+              const value = event.target.value
+              vnode.attrs.data.creator = value
+              vnode.attrs.formUpdated(vnode.attrs.data)
+            },
+            placeHolder: 'Zoek op exacte tekst, of gebruik een reguliere expressie'
+          })
+        ])
+      ]),
+      m('div', [
+        m('label', {
+          class: 'filter-label'
         }, 'Laat kaarten zien uit deze periode:'),
         m('div', {
           id: 'period-filter',
@@ -346,17 +374,24 @@ function renderResults (data, executeMapsQuery) {
     return m('ol', {
       id: 'results'
     }, data.map((result) => m('li', [
-      m('h3', {
-        class: 'truncate',
-        title: result.title.value
-      }, result.title.value),
+      m('div', {
+        class: 'result-values'
+      }, [
+        m('h3', {
+          class: 'truncate',
+          title: result.title.value
+        }, result.title.value),
+        m('span', result.begin.value.slice(0, 4))
+      ]),
       m('div', {
         class: 'result-values'
       }, [
         m('span', {
           class: 'truncate',
         }, result.provenance.value),
-        m('span', result.begin.value.slice(0, 4))
+        m('span', {
+          class: 'truncate'
+        }, result.creator.value)
       ]),
       m('a', {
         href: result.map.value
@@ -404,7 +439,8 @@ const App = {
         lat: 52.37064,
         lng: 4.90047
       },
-      collections: []
+      collections: [],
+      creator: ''
     }
   },
   view: (vnode) => ([
