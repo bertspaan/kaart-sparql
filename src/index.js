@@ -444,33 +444,24 @@ const App = {
     }
   },
   view: (vnode) => ([
-    m('header', [
-      m('img', {
-        src: 'images/header.jpg'
+    m('ol', {
+      class: 'sections'
+    }, [
+      m(Form, {
+        data: vnode.state.data.form,
+        formUpdated: (form) => Object.assign(vnode.state.data, form),
+        executeMapsQuery: () => executeMapsQuery(vnode)
       }),
-      m('h1', 'Kaart-SPARQL')
-    ]),
-    m('main', [
-      m('p', 'Hier komt de introductie!'),
-      m('ol', {
-        class: 'sections'
-      }, [
-        m(Form, {
-          data: vnode.state.data.form,
-          formUpdated: (form) => Object.assign(vnode.state.data, form),
-          executeMapsQuery: () => executeMapsQuery(vnode)
-        }),
-        m(Sparql, {
-          data: vnode.state.data.form,
-          executeMapsQuery: () => executeMapsQuery(vnode)
-        }),
-        m(Results, {
-          data: vnode.state.data.results,
-          executeMapsQuery: () => executeMapsQuery(vnode)
-        })
-      ])
+      m(Sparql, {
+        data: vnode.state.data.form,
+        executeMapsQuery: () => executeMapsQuery(vnode)
+      }),
+      m(Results, {
+        data: vnode.state.data.results,
+        executeMapsQuery: () => executeMapsQuery(vnode)
+      })
     ])
   ])
 }
 
-m.mount(document.body, App)
+m.mount(document.getElementById('app'), App)
