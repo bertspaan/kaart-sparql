@@ -1,6 +1,5 @@
-const SPARQL_ENDPOINT = 'https://data.adamlink.nl/_api/datasets/menno/alles/services/alles/sparql'
-// const SPARQL_ENDPOINT = 'https://data.adamlink.nl/AdamNet/all/services/endpoint'
-const SPARQL_HREF = 'https://data.adamlink.nl/AdamNet/all/services/endpoint'
+const SPARQL_ENDPOINT = 'https://api.druid.datalegend.net/datasets/adamnet/all/services/endpoint/sparql'
+const SPARQL_HREF = 'https://druid.datalegend.net/AdamNet/all/sparql/endpoint'
 
 const PREFIXES = `PREFIX dc: <http://purl.org/dc/elements/1.1/>
 PREFIX dct: <http://purl.org/dc/terms/>
@@ -43,7 +42,7 @@ SELECT ?map ?img ?title ?provenance ?creator ?begin {
   ?map dc:creator ?creator .
   ?map sem:hasBeginTimeStamp ?begin .
 
-  ?spatial dc:type "outline"^^xsd:string .
+  ?spatial dc:type "outline" .
   ?spatial geo:hasGeometry/geo:asWKT ?wkt .
   ?spatial wdt:P2046 ?km2 .
   ${collectionsFilter}
@@ -68,7 +67,7 @@ SELECT DISTINCT ?provenance (COUNT(?map) AS ?count) WHERE {
   ?map sem:hasBeginTimeStamp ?begin .
   ?map dct:provenance ?provenance .
 
-  ?spatial dc:type "outline"^^xsd:string .
+  ?spatial dc:type "outline" .
   ?spatial geo:hasGeometry/geo:asWKT ?wkt .
   ?spatial wdt:P2046 ?km2 .
 }
@@ -340,7 +339,7 @@ const Sparql = {
         `contentTypeConstruct=text%2Fturtle&contentTypeSelect=application%2Fsparql-results%2Bjson&` +
         `endpoint=${encodeURIComponent(SPARQL_ENDPOINT)}&requestMethod=POST&tabTitle=Query&` +
         `headers=%7B%7D&outputFormat=table`
-      }, 'Open query in AdamLink'),
+      }, 'Open query in SPARQL-editor'),
       m(ExecuteButton, {
         onclick: () => {
           vnode.attrs.executeMapsQuery()
