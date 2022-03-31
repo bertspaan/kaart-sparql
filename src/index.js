@@ -7,6 +7,8 @@ PREFIX geo: <http://www.opengis.net/ont/geosparql#>
 PREFIX sem: <http://semanticweb.cs.vu.nl/2009/11/sem/>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX bif: <http://www.openlinksw.com/schemas/bif#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 `.trim()
 
 PERIOD_BOUNDS = {
